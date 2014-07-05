@@ -80,6 +80,13 @@ def cache_once(path):
     return decorate
 
 
+def cache_eod(path, dt):
+    in_session, dt = last_trading_date(dt)
+    stamp = dt.strftime('%Y-%m-%d')
+    # TODO: handle in_session
+    return cache_once(path+'-%s' % stamp)
+
+
 def search(body, text):
     return BeautifulSoup(body).body.find(text=re.compile(text))
 
@@ -157,13 +164,15 @@ class Nasdaq(object):
         body = ''.join(list(ch))
         return body
 
-    def _summary_dl(self, code):
-        target = '/symbol/%(code)s' % {'code': code}
-        return self.get(target)
+    def summary(self, code):
+        path = 'nasdaq/summary/%(code)s/%(code)s' % {'code': code.upper()}
 
-    def _summary_parse(self, body):
+        @cache_eod(path, datetime.now())
+        def body():
+            target = '/symbol/%(code)s' % {'code': code}
+            return self.get(target)
+
         ret = {}
-
         mapper = {
             'current_yield': lambda s: float(s[:-1].strip()),
         }
@@ -184,10 +193,6 @@ class Nasdaq(object):
             value = mapper.get(key, lambda s: s)(value)
             ret[key] = value
         return ret
-
-    def summary(self, code):
-        body = self._summary_dl(code)
-        return self._summary_parse(body)
 
 
 class YQL(object):
