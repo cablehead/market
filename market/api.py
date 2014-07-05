@@ -201,28 +201,32 @@ class YQL(object):
     DATATABLES_URL = 'store://datatables.org/alltableswithkeys'
 
     def option_chain(self, code):
-        params = {
-            'format': 'json',
-            'env': self.DATATABLES_URL, }
+        path = 'yahoo/option_chain/%(code)s/%(code)s' % {'code': code.upper()}
+        @cache_eod(path, datetime.now())
+        def body():
+            params = {
+                'format': 'json',
+                'env': self.DATATABLES_URL, }
 
-        query = """
-            SELECT *
-            FROM yahoo.finance.options
-            WHERE
-                symbol="%(code)s" AND
-                expiration in (
-                    SELECT contract
-                    FROM yahoo.finance.option_contracts
-                    WHERE symbol="%(code)s")
-        """
+            query = """
+                SELECT *
+                FROM yahoo.finance.options
+                WHERE
+                    symbol="%(code)s" AND
+                    expiration in (
+                        SELECT contract
+                        FROM yahoo.finance.option_contracts
+                        WHERE symbol="%(code)s")
+            """
 
-        params['q'] = query % {'code': code}
+            params['q'] = query % {'code': code}
 
-        h = vanilla.Hub()
-        conn = h.http.connect(self.HOST)
+            h = vanilla.Hub()
+            conn = h.http.connect(self.HOST)
 
-        ch = conn.get(self.PATH, params=params)
-        ch.recv()  # status
-        ch.recv()  # headers
-        body = ''.join(list(ch))
+            ch = conn.get(self.PATH, params=params)
+            ch.recv()  # status
+            ch.recv()  # headers
+            body = ''.join(list(ch))
+            return body
         return json.loads(body)
