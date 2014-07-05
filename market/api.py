@@ -1,17 +1,68 @@
-import time
+from datetime import timedelta
+from datetime import datetime
+
+import json
 import re
 import os
+
+from dateutil.parser import parse
 
 from bs4 import BeautifulSoup
 
 import vanilla
 
 
-def cache(f):
-    def wrap(*a, **kw):
-        name = '.'.join([f.__name__] + list(a[1:]))
-        path = os.path.expanduser('~/.market/cache/%s' % name)
+def ET():
+    return datetime.utcnow() - timedelta(hours=4)
 
+
+def last_trading_date(now=None):
+    now = now or ET()
+    now = now.replace(second=0, microsecond=0)
+
+    cal = calendar()
+
+    def opened(when):
+        return when.weekday() < 5 and when not in cal['closed']
+
+    def last_opened(when):
+        while True:
+            when = when - timedelta(days=1)
+            if opened(when):
+                return when
+
+    if not opened(now.date()):
+        return False, last_opened(now.date())
+
+    opening = now.replace(hour=9, minute=30)
+    if now < opening:
+        return False, last_opened(now.date())
+
+    if now.date() in cal['1pm']:
+        closing = now.replace(hour=13, minute=0)
+    else:
+        closing = now.replace(hour=16, minute=0)
+
+    return bool(now < closing), now.date()
+
+
+def cache_once(path):
+    def decorate(f):
+        full = os.path.expanduser('~/.market/%s' % path)
+
+        if os.path.exists(full):
+            return open(full).read()
+
+        try:
+            os.makedirs(os.path.dirname(full))
+        except:
+            pass
+
+        ret = f()
+        open(full, 'w').write(ret)
+        return ret
+
+        """
         # TODO: enforce cache if it's out of hours
         return open(path).read()
 
@@ -24,7 +75,9 @@ def cache(f):
         data = f(*a, **kw)
         open(path, 'w').write(data)
         return data
-    return wrap
+        """
+
+    return decorate
 
 
 def search(body, text):
@@ -56,6 +109,36 @@ def numeric(s):
     return s
 
 
+def calendar():
+    @cache_once('nasdaqtrader/calendar')
+    def body():
+        h = vanilla.Hub()
+        conn = h.http.connect('http://www.nasdaqtrader.com/')
+        ch = conn.get('/Trader.aspx', params={'id': 'Calendar'})
+        ch.recv()  # status
+        ch.recv()  # headers
+        body = ch.recv()
+        return body
+
+    @cache_once('nasdaqtrader/calendar.json')
+    def rows():
+        locate = BeautifulSoup(body).find(class_='dataTable').find_all('tr')
+        rows = []
+        for row in locate[1:]:
+            rows.append([extract(x) for x in row.find_all('td')])
+        return json.dumps(rows)
+
+    ret = {'closed': set(), '1pm': set()}
+    for dt, name, state in json.loads(rows):
+        dt = parse(dt).date()
+        if state == 'Closed':
+            ret['closed'].add(dt)
+        else:
+            assert state == '1:00 p.m.'
+            ret['1pm'].add(dt)
+    return ret
+
+
 class Nasdaq(object):
     HOST = 'http://www.nasdaq.com/'
 
@@ -74,7 +157,6 @@ class Nasdaq(object):
         body = ''.join(list(ch))
         return body
 
-    @cache
     def _summary_dl(self, code):
         target = '/symbol/%(code)s' % {'code': code}
         return self.get(target)
@@ -106,3 +188,36 @@ class Nasdaq(object):
     def summary(self, code):
         body = self._summary_dl(code)
         return self._summary_parse(body)
+
+
+class YQL(object):
+    HOST = "http://query.yahooapis.com/"
+    PATH = "/v1/public/yql"
+    DATATABLES_URL = 'store://datatables.org/alltableswithkeys'
+
+    def option_chain(self, code):
+        params = {
+            'format': 'json',
+            'env': self.DATATABLES_URL, }
+
+        query = """
+            SELECT *
+            FROM yahoo.finance.options
+            WHERE
+                symbol="%(code)s" AND
+                expiration in (
+                    SELECT contract
+                    FROM yahoo.finance.option_contracts
+                    WHERE symbol="%(code)s")
+        """
+
+        params['q'] = query % {'code': code}
+
+        h = vanilla.Hub()
+        conn = h.http.connect(self.HOST)
+
+        ch = conn.get(self.PATH, params=params)
+        ch.recv()  # status
+        ch.recv()  # headers
+        body = ''.join(list(ch))
+        return json.loads(body)
