@@ -4,14 +4,15 @@ from datetime import date
 from market import api
 
 
-def test_nasdaq():
-    nasdaq = api.Nasdaq()
-    assert 'market_cap' in nasdaq.summary('chl')
+class TestNasdaq(object):
+    def test_summary(self):
+        nasdaq = api.Nasdaq()
+        assert 'market_cap' in nasdaq.summary('chl')
 
 
 def test_YQL():
     yql = api.YQL()
-    print yql.option_chain('CHL')
+    print yql.option_chain('chl')
 
 
 def test_calendar():

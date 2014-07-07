@@ -2,6 +2,7 @@ from datetime import timedelta
 from datetime import datetime
 
 import json
+import time
 import re
 import os
 
@@ -46,12 +47,13 @@ def last_trading_date(now=None):
     return bool(now < closing), now.date()
 
 
-def cache_once(path):
+def cache(path, ttl=None):
     def decorate(f):
         full = os.path.expanduser('~/.market/%s' % path)
 
         if os.path.exists(full):
-            return open(full).read()
+            if ttl is None or time.time() - os.path.getmtime(full) < ttl:
+                return open(full).read()
 
         try:
             os.makedirs(os.path.dirname(full))
@@ -62,29 +64,14 @@ def cache_once(path):
         open(full, 'w').write(ret)
         return ret
 
-        """
-        # TODO: enforce cache if it's out of hours
-        return open(path).read()
-
-        try:
-            last = os.path.getmtime(path)
-            if time.time() - last < 30*60:
-                return open(path).read()
-        except OSError:
-            pass
-        data = f(*a, **kw)
-        open(path, 'w').write(data)
-        return data
-        """
-
     return decorate
 
 
 def cache_eod(path, dt):
     in_session, dt = last_trading_date(dt)
     stamp = dt.strftime('%Y-%m-%d')
-    # TODO: handle in_session
-    return cache_once(path+'-%s' % stamp)
+    ttl = 30*60 if in_session else None
+    return cache(path+'-%s' % stamp, ttl=ttl)
 
 
 def search(body, text):
@@ -117,7 +104,7 @@ def numeric(s):
 
 
 def calendar():
-    @cache_once('nasdaqtrader/calendar')
+    @cache('nasdaqtrader/calendar')
     def body():
         h = vanilla.Hub()
         conn = h.http.connect('http://www.nasdaqtrader.com/')
@@ -127,7 +114,7 @@ def calendar():
         body = ch.recv()
         return body
 
-    @cache_once('nasdaqtrader/calendar.json')
+    @cache('nasdaqtrader/calendar.json')
     def rows():
         locate = BeautifulSoup(body).find(class_='dataTable').find_all('tr')
         rows = []
@@ -202,6 +189,7 @@ class YQL(object):
 
     def option_chain(self, code):
         path = 'yahoo/option_chain/%(code)s/%(code)s' % {'code': code.upper()}
+
         @cache_eod(path, datetime.now())
         def body():
             params = {
