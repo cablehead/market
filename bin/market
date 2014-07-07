@@ -24,7 +24,7 @@ def intword(n):
 
 
 def perc(f):
-    ret = '%6.2f%%' % f
+    ret = '%7.2f%%' % f
     return ret
 
 
