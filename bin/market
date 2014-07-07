@@ -8,9 +8,24 @@ Usage:
 import sys
 
 from docopt import docopt
-import humanize
 
 from market import api
+
+
+def intword(n):
+    n = n / (1000000.0)
+    if n > 1000:
+        l = 'b'
+        n = n / 1000
+    else:
+        l = 'm'
+    ret = '%6.2f' % n
+    return ret + l
+
+
+def perc(f):
+    ret = '%6.2f%%' % f
+    return ret
 
 
 __version__ = '0.0.1'
@@ -22,15 +37,34 @@ def main(argv):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)
 
-    """
-    for key in data:
-        print key, data[key]
-    """
-
     print '%s %s' % (code.upper(), data['quote'])
-    print '    Market cap:', humanize.intword(data['market_cap'])
-    print '    Yield:     ', data['current_yield']
+    print
+    print '    Market cap:', intword(data['market_cap'])
+    print '    Yield:     ', perc(data['current_yield'])
 
+    print
+    print '    Income:'
+    income = nasdaq.income_statement_annual(code)
+    for period in income:
+        print '\t', \
+            period.year, \
+            '  ', \
+            intword(income[period]['sales']), \
+            '  ', \
+            intword(income[period]['earnings'])
+
+    print
+    print '    Balance sheet:'
+    sheet = nasdaq.balance_sheet_annual(code)
+    for period in sheet:
+        print '\t', \
+            period.year, \
+            '  ', \
+            intword(sheet[period]['total_assets']), \
+            '  ', \
+            intword(sheet[period]['total_liabilities']), \
+            '  ', \
+            intword(sheet[period]['total_equity'])
 
 if __name__ == '__main__':
     argv = docopt(__doc__, version=__version__)

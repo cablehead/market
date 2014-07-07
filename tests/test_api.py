@@ -9,10 +9,18 @@ class TestNasdaq(object):
         nasdaq = api.Nasdaq()
         assert 'market_cap' in nasdaq.summary('chl')
 
+    def test_income_statement_annual(self):
+        nasdaq = api.Nasdaq()
+        nasdaq.income_statement_annual('chl')
+
+    def test_balance_sheet_annual(self):
+        nasdaq = api.Nasdaq()
+        nasdaq.balance_sheet_annual('chl')
+
 
 def test_YQL():
     yql = api.YQL()
-    print yql.option_chain('chl')
+    yql.option_chain('chl')
 
 
 def test_calendar():

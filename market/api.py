@@ -1,6 +1,8 @@
 from datetime import timedelta
 from datetime import datetime
+from datetime import date
 
+import collections
 import json
 import time
 import re
@@ -67,11 +69,16 @@ def cache(path, ttl=None):
     return decorate
 
 
-def cache_eod(path, dt):
-    in_session, dt = last_trading_date(dt)
+def cache_eod(path):
+    in_session, dt = last_trading_date(datetime.now())
     stamp = dt.strftime('%Y-%m-%d')
     ttl = 30*60 if in_session else None
     return cache(path+'-%s' % stamp, ttl=ttl)
+
+
+def cache_monthly(path):
+    stamp = date.today().strftime('%Y-%m')
+    return cache(path+'-%s' % stamp)
 
 
 def search(body, text):
@@ -84,8 +91,12 @@ def extract(el):
         if s:
             s = s.replace(u'\xa0', u' ')
             if s.startswith('$'):
-                s = numeric(s[2:])
+                s = numeric(s[1:])
             return s
+
+
+def label(s):
+    return s.lower().replace(' ', '_').replace(':', '')
 
 
 def numeric(s):
@@ -93,7 +104,7 @@ def numeric(s):
         return 0
     bak = s
     try:
-        s = s.replace(u',', u'')
+        s = s.strip().replace(u',', u'')
         if '.' in s:
             s = float(s)
         else:
@@ -154,7 +165,7 @@ class Nasdaq(object):
     def summary(self, code):
         path = 'nasdaq/summary/%(code)s/%(code)s' % {'code': code.upper()}
 
-        @cache_eod(path, datetime.now())
+        @cache_eod(path)
         def body():
             target = '/symbol/%(code)s' % {'code': code}
             return self.get(target)
@@ -165,6 +176,7 @@ class Nasdaq(object):
         }
 
         locate = BeautifulSoup(body).find(id='qwidget_lastsale')
+
         ret['quote'] = float(locate.text[1:])
 
         locate = search(body, 'Industry:')
@@ -181,6 +193,89 @@ class Nasdaq(object):
             ret[key] = value
         return ret
 
+    def balance_sheet_annual(self, code):
+        path = 'nasdaq/balance_sheet/annual/%(code)s/%(code)s' % {
+            'code': code.upper()}
+
+        @cache_monthly(path)
+        def body():
+            target = '/symbol/%(code)s/financials' % {'code': code}
+            return self.get(target, params={'query': 'balance-sheet'})
+
+        rows = BeautifulSoup(body).find(class_='genTable').find_all('tr')
+
+        want = [
+            'total_assets',
+            'total_liabilities',
+            'total_equity', ]
+
+        key_mapper = {}
+
+        ret = {}
+        for row in rows:
+            cells = [
+                extract(x) for x in row.children if x.name in ('td', 'th')]
+            if not cells[0]:
+                continue
+
+            key, cols = label(cells[0]), cells[2:]
+            if not ret:
+                periods = [parse(x) for x in cols]
+                ret = collections.OrderedDict(
+                    (x, collections.OrderedDict()) for x in periods)
+            else:
+                if key in want:
+                    for i, value in enumerate(cols):
+                        ret[periods[i]][key_mapper.get(key, key)] = \
+                            value * 1000
+
+        return ret
+
+    def income_statement_annual(self, code):
+        path = 'nasdaq/income_statement/annual/%(code)s/%(code)s' % {
+            'code': code.upper()}
+
+        @cache_monthly(path)
+        def body():
+            target = '/symbol/%(code)s/financials' % {'code': code}
+            return self.get(target, params={'query': 'income-statement'})
+
+        rows = BeautifulSoup(body).find(class_='genTable').find_all('tr')
+
+        want = [
+            'total_revenue',
+            'cost_of_revenue',
+            'gross_profit',
+            'operating_income',
+            'earnings_before_interest_and_tax',
+            'earnings_before_tax',
+            'net_income',
+            'net_income_applicable_to_common_shareholders', ]
+
+        key_mapper = {
+            'total_revenue': 'sales',
+            'net_income_applicable_to_common_shareholders': 'earnings', }
+
+        ret = {}
+        for row in rows:
+            cells = [
+                extract(x) for x in row.children if x.name in ('td', 'th')]
+            if not cells[0]:
+                continue
+
+            key, cols = label(cells[0]), cells[2:]
+            if not ret:
+                periods = [parse(x) for x in cols]
+                ret = collections.OrderedDict(
+                    (x, collections.OrderedDict()) for x in periods)
+            else:
+                if key in want:
+                    for i, value in enumerate(cols):
+                        ret[periods[i]][key_mapper.get(key, key)] = \
+                            value * 1000
+
+        return ret
+
 
 class YQL(object):
     HOST = "http://query.yahooapis.com/"
@@ -190,7 +285,7 @@ class YQL(object):
     def option_chain(self, code):
         path = 'yahoo/option_chain/%(code)s/%(code)s' % {'code': code.upper()}
 
-        @cache_eod(path, datetime.now())
+        @cache_eod(path)
         def body():
             params = {
                 'format': 'json',
