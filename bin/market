@@ -19,7 +19,7 @@ def intword(n):
         n = n / 1000
     else:
         l = 'm'
-    ret = '%6.2f' % n
+    ret = '%7.2f' % n
     return ret + l
 
 
