@@ -92,6 +92,8 @@ def extract(el):
             s = s.replace(u'\xa0', u' ')
             if s.startswith('$'):
                 s = numeric(s[1:])
+            elif s.startswith('($'):
+                s = -1*numeric(s[2:].replace(')', ''))
             return s
 
 
@@ -218,7 +220,7 @@ class Nasdaq(object):
             if not cells[0]:
                 continue
 
-            key, cols = label(cells[0]), cells[2:]
+            key, cols = label(cells[0]), [x for x in cells[2:] if x]
             if not ret:
                 periods = [parse(x) for x in cols]
                 ret = collections.OrderedDict(
@@ -263,7 +265,7 @@ class Nasdaq(object):
             if not cells[0]:
                 continue
 
-            key, cols = label(cells[0]), cells[2:]
+            key, cols = label(cells[0]), [x for x in cells[2:] if x]
             if not ret:
                 periods = [parse(x) for x in cols]
                 ret = collections.OrderedDict(
