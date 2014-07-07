@@ -167,7 +167,7 @@ class Nasdaq(object):
 
         @cache_eod(path)
         def body():
-            target = '/symbol/%(code)s' % {'code': code}
+            target = '/symbol/%(code)s' % {'code': code.lower()}
             return self.get(target)
 
         ret = {}
@@ -199,7 +199,7 @@ class Nasdaq(object):
 
         @cache_monthly(path)
         def body():
-            target = '/symbol/%(code)s/financials' % {'code': code}
+            target = '/symbol/%(code)s/financials' % {'code': code.lower()}
             return self.get(target, params={'query': 'balance-sheet'})
 
         rows = BeautifulSoup(body).find(class_='genTable').find_all('tr')
@@ -237,7 +237,7 @@ class Nasdaq(object):
 
         @cache_monthly(path)
         def body():
-            target = '/symbol/%(code)s/financials' % {'code': code}
+            target = '/symbol/%(code)s/financials' % {'code': code.lower()}
             return self.get(target, params={'query': 'income-statement'})
 
         rows = BeautifulSoup(body).find(class_='genTable').find_all('tr')
