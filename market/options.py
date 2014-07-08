@@ -77,6 +77,9 @@ class Strike(Node):
         if s in typ:
             return typ[s]
 
+    def __getattr__(self, name):
+        return getattr(self.node, name)
+
     def __summary__(self):
         return "last: %s" % self.node.last
 

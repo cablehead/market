@@ -335,7 +335,7 @@ class YQL(object):
             for strike in chain['option']:
                 store[strike['type']][strike['strikePrice']] = \
                     options.Contract(
-                        *[strike[x] for x in
+                        *[float(strike[x]) for x in
                             ['bid', 'ask', 'lastPrice', 'vol', 'openInt']])
 
         return options.Pool(code)[quote_date]

@@ -2,13 +2,19 @@
 
 """
 Usage:
-    market <code>
+    market stock <code>
+    market portfolio
 """
+
+
+__version__ = '0.0.1'
+
 
 import sys
 
 from docopt import docopt
 
+from market import portfolio
 from market import api
 
 
@@ -28,12 +34,8 @@ def perc(f):
     return ret
 
 
-__version__ = '0.0.1'
 
-
-def main(argv):
-    code = argv['<code>']
-
+def do_stock(code):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)
 
@@ -65,6 +67,23 @@ def main(argv):
             intword(sheet[period]['total_liabilities']), \
             '  ', \
             intword(sheet[period]['total_equity'])
+
+
+def do_portfolio():
+    p = portfolio.Portfolio()
+
+    for spread in p.spreads:
+        print spread
+
+
+def main(argv):
+    if argv.get('stock'):
+        code = argv['<code>']
+        return do_stock(code)
+
+    if argv.get('portfolio'):
+        return do_portfolio()
+
 
 if __name__ == '__main__':
     argv = docopt(__doc__, version=__version__)
