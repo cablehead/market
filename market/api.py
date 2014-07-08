@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 
 import vanilla
 
+from market import options
+
 
 def ET():
     return datetime.utcnow() - timedelta(hours=4)
@@ -314,4 +316,23 @@ class YQL(object):
             ch.recv()  # headers
             body = ''.join(list(ch))
             return body
-        return json.loads(body)
+
+        in_session, quote_date = last_trading_date()
+        data = json.loads(body)
+
+        base = options._data.setdefault(code.upper(), {})
+        base = base.setdefault(quote_date, collections.OrderedDict())
+
+        for chain in data['query']['results']['optionsChain']:
+            store = base.setdefault(
+                chain['expiration'], {
+                    'C': collections.OrderedDict(),
+                    'P': collections.OrderedDict(), })
+
+            for strike in chain['option']:
+                store[strike['type']][strike['strikePrice']] = \
+                    options.Contract(
+                        *[strike[x] for x in
+                            ['bid', 'ask', 'lastPrice', 'vol', 'openInt']])
+
+        return options.Pool(code)[quote_date]
