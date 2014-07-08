@@ -2,6 +2,7 @@
 
 """
 Usage:
+    market chain <code>
     market stock <code>
     market portfolio
 """
@@ -76,6 +77,12 @@ def do_portfolio():
         print spread
 
 
+def do_chain(code):
+    quote = api.YQL().option_chain(code)
+    for expiry in quote:
+        print expiry
+
+
 def main(argv):
     if argv.get('stock'):
         code = argv['<code>']
@@ -83,6 +90,10 @@ def main(argv):
 
     if argv.get('portfolio'):
         return do_portfolio()
+
+    if argv.get('chain'):
+        code = argv['<code>']
+        return do_chain(code)
 
 
 if __name__ == '__main__':

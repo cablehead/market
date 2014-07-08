@@ -1,4 +1,8 @@
+from datetime import datetime
+
 import collections
+
+from dateutil.parser import parse
 
 try:
     import msgpack
@@ -101,6 +105,13 @@ class Expiry(Node):
     @property
     def p(self):
         return self["P"]
+
+    @property
+    def togo(self):
+        return (parse(self.path[-1]) - datetime.now()).days
+
+    def __summary__(self):
+        return "togo: %s" % self.togo
 
 
 class Quote(Node):
