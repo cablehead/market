@@ -318,6 +318,8 @@ class YQL(object):
             ch.recv()  # status
             ch.recv()  # headers
             body = ''.join(list(ch))
+            data = json.loads(body)
+            assert data['query']['results']
             return body
 
         in_session, quote_date = last_trading_date()
@@ -327,12 +329,13 @@ class YQL(object):
         base = base.setdefault(quote_date, collections.OrderedDict())
 
         for chain in data['query']['results']['optionsChain']:
-            store = base.setdefault(
-                chain['expiration'], {
-                    'C': collections.OrderedDict(),
-                    'P': collections.OrderedDict(), })
-
             for strike in chain['option']:
+                expiry = strike['symbol'][len(code):len(code)+6]
+                expiry = '20%s-%s-%s' % (expiry[:2], expiry[2:4], expiry[4:])
+                store = base.setdefault(
+                    expiry, {
+                        'C': collections.OrderedDict(),
+                        'P': collections.OrderedDict(), })
                 store[strike['type']][strike['strikePrice']] = \
                     options.Contract(
                         *[float(strike[x]) for x in

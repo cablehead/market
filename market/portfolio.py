@@ -65,8 +65,11 @@ class Spread(object):
 
     @property
     def perc(self):
-        return '%2d%%' % abs(int(
+        ret = '%2d%%' % abs(int(
             ((self.current - self.basis) / self.basis) * 100))
+        if self.current < self.basis:
+            ret = '-'+ret
+        return ret
 
     @property
     def togo(self):
