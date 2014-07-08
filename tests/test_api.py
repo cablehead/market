@@ -20,10 +20,8 @@ class TestNasdaq(object):
 
 def test_YQL():
     yql = api.YQL()
-    quote = yql.option_chain('chl')
-    for expiry in quote:
-        for strike in expiry['C']:
-            pass
+    yql.option_chain('fb')
+    yql.option_chain('fb')
 
 
 def test_calendar():

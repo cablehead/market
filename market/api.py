@@ -287,6 +287,9 @@ class YQL(object):
     DATATABLES_URL = 'store://datatables.org/alltableswithkeys'
 
     def option_chain(self, code):
+        if code.upper() in options._data:
+            return list(options.Pool(code))[0]
+
         path = 'yahoo/option_chain/%(code)s/%(code)s' % {'code': code.upper()}
 
         @cache_eod(path)
