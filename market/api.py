@@ -21,6 +21,11 @@ def ET():
     return datetime.utcnow() - timedelta(hours=4)
 
 
+def last_monday(now=None):
+    now = now or date.today()
+    return now - timedelta(days=now.weekday())
+
+
 def last_trading_date(now=None):
     now = now or ET()
     now = now.replace(second=0, microsecond=0)
@@ -80,6 +85,11 @@ def cache_eod(path):
 
 def cache_monthly(path):
     stamp = date.today().strftime('%Y-%m')
+    return cache(path+'-%s' % stamp)
+
+
+def cache_weekly(path):
+    stamp = last_monday().strftime('%Y-%m-%d')
     return cache(path+'-%s' % stamp)
 
 
@@ -342,3 +352,47 @@ class YQL(object):
                             ['bid', 'ask', 'lastPrice', 'vol', 'openInt']])
 
         return options.Pool(code)[quote_date]
+
+
+class Estimize(object):
+    HOST = 'http://www.estimize.com'
+
+    def estimate(self, code):
+        path = 'estimize/earnings/%(code)s/%(code)s' % {'code': code.upper()}
+
+        @cache_weekly(path)
+        def body():
+            h = vanilla.Hub()
+            conn = h.http.connect(self.HOST)
+            ch = conn.get('/%s' % code.lower())
+            ch.recv()  # status
+            ch.recv()  # headers
+            body = ''.join(list(ch))
+            return body
+
+        ret = collections.OrderedDict()
+
+        ret.to_report = parse(search(body, 'estimated to report').split()[-1])
+
+        script = search(body, 'Estimize.ReleaseCollection')
+        data = script.split('Estimize.ReleaseCollection(')[1].split(')')[0]
+        data = json.loads(data)
+
+        class Quarter(object):
+            pass
+
+        Estimate = collections.namedtuple(
+            'Estimate', ['actual', 'wallst', 'estimize'])
+
+        for item in data:
+            q = Quarter()
+            q.earnings = Estimate(
+                item['eps'],
+                item['wallstreet_eps_mean'],
+                item['estimize_eps_mean'])
+            q.revenue = Estimate(
+                item['revenue'],
+                item['wallstreet_revenue_mean'],
+                item['estimize_revenue_mean'])
+            ret[item['name']] = q
+        return ret

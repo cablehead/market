@@ -35,7 +35,6 @@ def perc(f):
     return ret
 
 
-
 def do_stock(code):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)

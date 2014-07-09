@@ -24,8 +24,22 @@ def test_YQL():
     yql.option_chain('fb')
 
 
+def test_Estimize():
+    e = api.Estimize()
+    e.estimate('outr').to_report
+
+
 def test_calendar():
     assert date(2014, 7, 4) in api.calendar()['closed']
+
+
+def test_last_monday():
+    now = mon = date(2014, 7, 7)  # MON
+    assert api.last_monday(now) == mon
+    now = date(2014, 7, 8)  # TUE
+    assert api.last_monday(now) == mon
+    now = date(2014, 7, 13)  # SUN
+    assert api.last_monday(now) == mon
 
 
 def test_last_trading_date():
