@@ -205,6 +205,8 @@ class Nasdaq(object):
             key = key.replace(' ', '_')
             value = mapper.get(key, lambda s: s)(value)
             ret[key] = value
+
+        ret['outstanding'] = int(round(ret['market_cap'] / ret['quote']))
         return ret
 
     def balance_sheet_annual(self, code):
@@ -372,7 +374,7 @@ class Estimize(object):
 
         ret = collections.OrderedDict()
 
-        ret.to_report = parse(search(body, 'estimated to report').split()[-1])
+        ret.to_report = parse(search(body, 'to report').split()[-1])
 
         script = search(body, 'Estimize.ReleaseCollection')
         data = script.split('Estimize.ReleaseCollection(')[1].split(')')[0]
