@@ -62,10 +62,12 @@ def do_stock(code):
     print '    Market cap:', intword(data['market_cap'])
     print '    Yield:     ', perc(data['current_yield'])
 
+    income = nasdaq.income_statement_annual(code)
     print
     print '    Income: Reports', estimate.to_report.strftime('%b %d'), \
         '-', (estimate.to_report - datetime.now()).days, 'days'
-    income = nasdaq.income_statement_annual(code)
+
+    """
     def fmt_eps(name, revenue, eps):
         name = str(name)
         print '\t', \
@@ -75,7 +77,13 @@ def do_stock(code):
             '   ', \
             '%7.2f' % eps, \
             '  ', \
-            '%5.2f' % (data['quote'] / eps)
+            '%5.2f' % (data['quote'] / eps), \
+            '  ', \
+            '%5.2f' % (data['market_cap'] / float(revenue))
+    fmt_eps('future', future_revenue, future_eps)
+    fmt_eps('trailing', trailing_revenue, trailing_eps)
+    print
+    """
 
     def fmt(name, revenue, earnings):
         name = str(name)
@@ -86,11 +94,10 @@ def do_stock(code):
             '  ', \
             intword(earnings), \
             '  ', \
-            '%5.2f' % (data['market_cap'] / earnings)
+            '%5.2f' % (data['market_cap'] / earnings), \
+            '  ', \
+            '%5.2f' % (data['market_cap'] / float(revenue))
 
-    fmt_eps('future', future_revenue, future_eps)
-    fmt_eps('trailing', trailing_revenue, trailing_eps)
-    print
     fmt('future', future_revenue, future_earnings)
     fmt('trailing', trailing_revenue, trailing_earnings)
     for period in income:
