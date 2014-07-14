@@ -77,7 +77,7 @@ def cache(path, ttl=None):
 
 
 def cache_eod(path):
-    in_session, dt = last_trading_date(datetime.now())
+    in_session, dt = last_trading_date()
     stamp = dt.strftime('%Y-%m-%d')
     ttl = 30*60 if in_session else None
     return cache(path+'-%s' % stamp, ttl=ttl)
@@ -133,10 +133,7 @@ def calendar():
     def body():
         h = vanilla.Hub()
         conn = h.http.connect('http://www.nasdaqtrader.com/')
-        ch = conn.get('/Trader.aspx', params={'id': 'Calendar'})
-        ch.recv()  # status
-        ch.recv()  # headers
-        body = ch.recv()
+        body = conn.get('/Trader.aspx', params={'id': 'Calendar'}).recv().consume()
         return body
 
     @cache('nasdaqtrader/calendar.json')
@@ -171,9 +168,7 @@ class Nasdaq(object):
         params = params or {}
         ch = conn.get(
             target, headers={'User-Agent': self.USER_AGENT}, params=params)
-        ch.recv()  # status
-        ch.recv()  # headers
-        body = ''.join(list(ch))
+        body = ch.recv().consume()
         return body
 
     def summary(self, code):
@@ -326,10 +321,7 @@ class YQL(object):
             h = vanilla.Hub()
             conn = h.http.connect(self.HOST)
 
-            ch = conn.get(self.PATH, params=params)
-            ch.recv()  # status
-            ch.recv()  # headers
-            body = ''.join(list(ch))
+            body = conn.get(self.PATH, params=params).recv().consume()
             data = json.loads(body)
             assert data['query']['results']
             return body
@@ -367,9 +359,7 @@ class Estimize(object):
             h = vanilla.Hub()
             conn = h.http.connect(self.HOST)
             ch = conn.get('/%s' % code.lower())
-            ch.recv()  # status
-            ch.recv()  # headers
-            body = ''.join(list(ch))
+            body = ch.recv().consume()
             return body
 
         ret = collections.OrderedDict()
