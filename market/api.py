@@ -133,7 +133,8 @@ def calendar():
     def body():
         h = vanilla.Hub()
         conn = h.http.connect('http://www.nasdaqtrader.com/')
-        body = conn.get('/Trader.aspx', params={'id': 'Calendar'}).recv().consume()
+        body = conn.get(
+            '/Trader.aspx', params={'id': 'Calendar'}).recv().consume()
         return body
 
     @cache('nasdaqtrader/calendar.json')
@@ -286,6 +287,84 @@ class Nasdaq(object):
                             value * 1000
 
         return ret
+
+
+class Google(object):
+    HOST = "http://www.google.com/"
+    PATH = "/finance/option_chain"
+
+    def option_chain(self, code):
+        if code.upper() in options._data:
+            return list(options.Pool(code))[0]
+
+        path = 'google/option_chain/%(code)s/%(code)s' % {'code': code.upper()}
+
+        @cache_eod(path)
+        def body():
+            params = {
+                'type': 'All',
+                'output': 'json',
+                'q': code, }
+
+            def expiry_to_str(e):
+                return '%04d-%02d-%02d' % (e['y'], e['m'], e['d'])
+
+            h = vanilla.Hub()
+            conn = h.http.connect(self.HOST)
+
+            ret = {}
+
+            body = conn.get(self.PATH, params=params).recv().consume()
+            body = re.sub(r'(\w+):', r'"\1":', body)
+            data = json.loads(body)
+
+            expiry = expiry_to_str(data['expiry'])
+
+            expirations = set(
+                expiry_to_str(e) for e in data['expirations'])
+            expirations.remove(expiry)
+
+            ret[expiry] = (data['calls'], data['puts'])
+
+            while expirations:
+                expiry = expirations.pop()
+                y, m, d = expiry.split('-')
+
+                params['expy'], params['expm'], params['expd'] = [
+                    int(x) for x in expiry.split('-')]
+
+                body = conn.get(self.PATH, params=params).recv().consume()
+                body = re.sub(r'(\w+):', r'"\1":', body)
+                data = json.loads(body)
+
+                assert expiry_to_str(data['expiry']) == expiry, \
+                    '%s != %s' % (data['expiry'], expiry)
+
+                ret[expiry] = (data['calls'], data['puts'])
+
+            return json.dumps(ret)
+
+        in_session, quote_date = last_trading_date()
+        data = json.loads(body)
+
+        base = options._data.setdefault(code.upper(), {})
+        base = base.setdefault(quote_date, collections.OrderedDict())
+
+        for expiry in data:
+            store = base.setdefault(
+                expiry, {
+                    'C': collections.OrderedDict(),
+                    'P': collections.OrderedDict(), })
+
+            calls, puts = data[expiry]
+            for typ, contracts in [('C', calls), ('P', puts)]:
+                for contract in contracts:
+                    store[typ][contract['strike']] = \
+                        options.Contract(
+                            *[0 if contract[x] == '-' else float(contract[x])
+                                for x in ['b', 'a', 'p', 'vol', 'oi']])
+
+        return options.Pool(code)[quote_date]
 
 
 class YQL(object):

@@ -129,7 +129,7 @@ def do_portfolio():
 
 
 def do_chain(code):
-    quote = api.YQL().option_chain(code)
+    quote = api.Google().option_chain(code)
     for expiry in quote:
         print expiry
 
