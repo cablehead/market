@@ -364,7 +364,9 @@ class Estimize(object):
 
         ret = collections.OrderedDict()
 
-        ret.to_report = parse(search(body, 'to report').split()[-1])
+        dt = search(body, 'to report').parent.find('span').text
+        dt = parse(dt)
+        ret.to_report = dt
 
         script = search(body, 'Estimize.ReleaseCollection')
         data = script.split('Estimize.ReleaseCollection(')[1].split(')')[0]

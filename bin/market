@@ -42,6 +42,7 @@ def do_stock(code):
     data = nasdaq.summary(code)
 
     estimate = api.Estimize().estimate(code)
+    income = nasdaq.income_statement_annual(code)
 
     trailing_eps = sum(
         estimate[x].earnings.actual for x in estimate.keys()[-5:-1])
@@ -61,6 +62,7 @@ def do_stock(code):
     print
     print '    Market cap:', intword(data['market_cap'])
     print '    Yield:     ', perc(data['current_yield'])
+    print '    Industry:  ', data['industry']
 
     income = nasdaq.income_statement_annual(code)
     print
@@ -122,7 +124,6 @@ def do_stock(code):
 
 def do_portfolio():
     p = portfolio.Portfolio()
-
     for spread in p.spreads:
         print spread
 
