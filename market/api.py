@@ -359,7 +359,7 @@ class Google(object):
             calls, puts = data[expiry]
             for typ, contracts in [('C', calls), ('P', puts)]:
                 for contract in contracts:
-                    store[typ][contract['strike']] = \
+                    store[typ][float(contract['strike'])] = \
                         options.Contract(
                             *[0 if contract[x] == '-' else float(contract[x])
                                 for x in ['b', 'a', 'p', 'vol', 'oi']])

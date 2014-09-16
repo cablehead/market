@@ -2,8 +2,8 @@
 
 """
 Usage:
-    market chain <code>
     market stock <code>
+    market chain <code> [<expiry> [--offset=<offset>] [--type=<type>]]
     market portfolio
 """
 
@@ -128,10 +128,27 @@ def do_portfolio():
         print spread
 
 
-def do_chain(code):
-    quote = api.Google().option_chain(code)
-    for expiry in quote:
-        print expiry
+def do_chain(code, expiry=None, offset=None, typ=None):
+    nasdaq = api.Nasdaq()
+    data = nasdaq.summary(code)
+    print '%s %s' % (code.upper(), data['quote'])
+
+    chain = api.Google().option_chain(code)
+    if not expiry:
+        for expiry in chain:
+            print expiry
+        return
+
+    price = data['quote']
+    if offset:
+        price = price + (price*(float(offset)/100))
+
+    typs = typ and [typ.upper()] or ['C', 'P']
+
+    for typ in typs:
+        print
+        for strike in chain[expiry][typ].near(price, 3):
+            print strike
 
 
 def main(argv):
@@ -139,12 +156,17 @@ def main(argv):
         code = argv['<code>']
         return do_stock(code)
 
-    if argv.get('portfolio'):
-        return do_portfolio()
-
     if argv.get('chain'):
         code = argv['<code>']
-        return do_chain(code)
+        expiry = argv.get('<expiry>')
+        offset = argv.get('--offset')
+        typ = argv.get('--type')
+        if typ:
+            assert typ in ['c', 'p']
+        return do_chain(code, expiry=expiry, offset=offset, typ=typ)
+
+    if argv.get('portfolio'):
+        return do_portfolio()
 
 
 if __name__ == '__main__':
