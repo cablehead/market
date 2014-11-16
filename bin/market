@@ -3,8 +3,14 @@
 """
 Usage:
     market stock <code>
-    market chain <code> [<expiry> [--offset=<offset>] [--type=<type>]]
+    market chain <code> [<expiry>
+        [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
     market portfolio
+
+Options:
+    -s <strike> --strike==<strike>  # specific strike
+    -o <offset> --offset==<offset>  # offset
+    -t <type> --type==<type>  # option type: c or p
 """
 
 
@@ -49,16 +55,16 @@ def do_stock(code):
             estimate[x].earnings.actual for x in estimate.keys()[-5:-1])
         trailing_earnings = trailing_eps * data['outstanding']
         trailing_revenue = sum(
-            estimate[x].revenue.actual for x in estimate.keys()[-5:-1]) * 1000000
+            estimate[x].revenue.actual for x in estimate.keys()[-5:-1]
+            ) * 1000000
 
         future_eps = sum(
             estimate[x].earnings.actual for x in estimate.keys()[-4:-1]
-                ) + estimate[estimate.keys()[-1]].earnings.wallst
+            ) + estimate[estimate.keys()[-1]].earnings.wallst
         future_earnings = future_eps * data['outstanding']
         future_revenue = (sum(
             estimate[x].revenue.actual for x in estimate.keys()[-4:-1]
-                ) + estimate[estimate.keys()[-1]].revenue.wallst) * 1000000
-
+            ) + estimate[estimate.keys()[-1]].revenue.wallst) * 1000000
 
     print '%s %s' % (code.upper(), data['quote'])
     print
@@ -132,7 +138,7 @@ def do_portfolio():
         print spread
 
 
-def do_chain(code, expiry=None, offset=None, typ=None):
+def do_chain(code, expiry=None, strike=None, offset=None, typ=None):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)
     print '%s %s' % (code.upper(), data['quote'])
@@ -147,27 +153,43 @@ def do_chain(code, expiry=None, offset=None, typ=None):
     if offset:
         price = price + (price*(float(offset)/100))
 
+    if strike:
+        strike = float(strike)
+
     typs = typ and [typ.upper()] or ['C', 'P']
 
-    for typ in typs:
-        print
-        for strike in chain[expiry][typ].near(price, 3):
-            print strike
+    if '+' in expiry:
+        expiry, n = expiry.split('+')
+        n = int(n)+1
+    else:
+        n = 1
+    expiry = chain[expiry]
+
+    while True:
+        for typ in typs:
+            if strike:
+                print expiry.togo, expiry[typ].at(strike)
+            else:
+                print expiry.togo
+                for x in expiry[typ].near(price, 3):
+                    print '%02.2f' % (((x.ask+x.bid)/2)/expiry.togo), x
+        n -= 1
+        if not n:
+            break
+        expiry = expiry.next()
 
 
 def main(argv):
     if argv.get('stock'):
-        code = argv['<code>']
-        return do_stock(code)
+        return do_stock(argv['<code>'])
 
     if argv.get('chain'):
-        code = argv['<code>']
-        expiry = argv.get('<expiry>')
-        offset = argv.get('--offset')
-        typ = argv.get('--type')
-        if typ:
-            assert typ in ['c', 'p']
-        return do_chain(code, expiry=expiry, offset=offset, typ=typ)
+        return do_chain(
+            argv['<code>'],
+            expiry=argv.get('<expiry>'),
+            strike=argv.get('--strike'),
+            offset=argv.get('--offset'),
+            typ=argv.get('--type'))
 
     if argv.get('portfolio'):
         return do_portfolio()

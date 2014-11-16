@@ -55,11 +55,20 @@ class Node(object):
     def keys(self):
         return self.node.keys()
 
+    def next(self):
+        peers = _data
+        for x in self.path[:-1]:
+            peers = peers[x]
+        keys = peers.keys()
+        keys.sort()
+        return self.__class__(
+            self.path[:-1]+[keys[keys.index(self.path[-1])+1]])
+
     def __contains__(self, key):
         return key in self.node
 
     def __getitem__(self, key):
-        if not key in self.node:
+        if key not in self.node:
             self.node[key] = {}
         return self.__child__(list(self.path)+[key])
 
