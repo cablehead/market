@@ -443,7 +443,10 @@ class Estimize(object):
 
         ret = collections.OrderedDict()
 
-        dt = search(body, 'to report').parent.find('span').text
+        if BeautifulSoup(body).find('h1').text == 'Page Not Found':
+            return ret
+
+        dt = search(body, 'to report').parent.find('span').text.split()[0]
         dt = parse(dt)
         ret.to_report = dt
 

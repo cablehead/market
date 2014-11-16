@@ -44,19 +44,21 @@ def do_stock(code):
     estimate = api.Estimize().estimate(code)
     income = nasdaq.income_statement_annual(code)
 
-    trailing_eps = sum(
-        estimate[x].earnings.actual for x in estimate.keys()[-5:-1])
-    trailing_earnings = trailing_eps * data['outstanding']
-    trailing_revenue = sum(
-        estimate[x].revenue.actual for x in estimate.keys()[-5:-1]) * 1000000
+    if estimate:
+        trailing_eps = sum(
+            estimate[x].earnings.actual for x in estimate.keys()[-5:-1])
+        trailing_earnings = trailing_eps * data['outstanding']
+        trailing_revenue = sum(
+            estimate[x].revenue.actual for x in estimate.keys()[-5:-1]) * 1000000
 
-    future_eps = sum(
-        estimate[x].earnings.actual for x in estimate.keys()[-4:-1]
-            ) + estimate[estimate.keys()[-1]].earnings.wallst
-    future_earnings = future_eps * data['outstanding']
-    future_revenue = (sum(
-        estimate[x].revenue.actual for x in estimate.keys()[-4:-1]
-            ) + estimate[estimate.keys()[-1]].revenue.wallst) * 1000000
+        future_eps = sum(
+            estimate[x].earnings.actual for x in estimate.keys()[-4:-1]
+                ) + estimate[estimate.keys()[-1]].earnings.wallst
+        future_earnings = future_eps * data['outstanding']
+        future_revenue = (sum(
+            estimate[x].revenue.actual for x in estimate.keys()[-4:-1]
+                ) + estimate[estimate.keys()[-1]].revenue.wallst) * 1000000
+
 
     print '%s %s' % (code.upper(), data['quote'])
     print
@@ -65,9 +67,10 @@ def do_stock(code):
     print '    Industry:  ', data['industry']
 
     income = nasdaq.income_statement_annual(code)
-    print
-    print '    Income: Reports', estimate.to_report.strftime('%b %d'), \
-        '-', (estimate.to_report - datetime.now()).days, 'days'
+    if estimate:
+        print
+        print '    Income: Reports', estimate.to_report.strftime('%b %d'), \
+            '-', (estimate.to_report - datetime.now()).days, 'days'
 
     """
     def fmt_eps(name, revenue, eps):
@@ -100,8 +103,9 @@ def do_stock(code):
             '  ', \
             '%5.2f' % (data['market_cap'] / float(revenue))
 
-    fmt('future', future_revenue, future_earnings)
-    fmt('trailing', trailing_revenue, trailing_earnings)
+    if estimate:
+        fmt('future', future_revenue, future_earnings)
+        fmt('trailing', trailing_revenue, trailing_earnings)
     for period in income:
         fmt(period.year, income[period]['sales'], income[period]['earnings'])
 
