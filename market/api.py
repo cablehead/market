@@ -8,6 +8,8 @@ import time
 import re
 import os
 
+import lxml.html
+
 from dateutil.parser import parse
 
 from bs4 import BeautifulSoup
@@ -171,6 +173,26 @@ class Nasdaq(object):
             target, headers={'User-Agent': self.USER_AGENT}, params=params)
         body = ch.recv().consume()
         return body
+
+    @staticmethod
+    def parse_realtime(body):
+        tree = lxml.html.document_fromstring(body)
+        data = {
+            'quote': tree.xpath('//div[@id="qwidget_lastsale"]')[0].text,
+            'change': tree.xpath('//div[@id="qwidget_netchange"]')[0].text,
+            'percent': tree.xpath('//div[@id="qwidget_percent"]')[0].text,
+            'when': tree.xpath(
+                '//div[@id="qwidget_markettimedate"]//span')[0].text,
+            'up': 'arrow-green' in
+                tree.xpath('//div[@id="qwidget-arrow"]/div')[0].get('class'), }
+
+        data['change'] = round(float(data['change']), 2)
+        data['quote'] = round(float(data['quote'][1:]), 2)
+
+        if len(data['when']) < 11:
+            data['when'] += ' - market closed'
+
+        return data
 
     def summary(self, code):
         path = 'nasdaq/summary/%(code)s/%(code)s' % {'code': code.upper()}

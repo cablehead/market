@@ -1,3 +1,5 @@
+import os
+
 from datetime import datetime
 from datetime import date
 
@@ -5,6 +7,7 @@ from market import api
 
 
 class TestNasdaq(object):
+    """
     def test_summary(self):
         nasdaq = api.Nasdaq()
         assert 'market_cap' in nasdaq.summary('chl')
@@ -16,17 +19,51 @@ class TestNasdaq(object):
     def test_balance_sheet_annual(self):
         nasdaq = api.Nasdaq()
         nasdaq.balance_sheet_annual('chl')
+    """
+
+    def body(self, name):
+        return open(os.path.join(
+            os.path.dirname(__file__), 'data', name)).read()
+
+    def test_parse_realtime(self):
+        body = self.body('nasdaq.realtime-pre.html')
+        assert api.Nasdaq.parse_realtime(body) == {
+            'quote': 111.5,
+            'when': '12/18/2014 8:08:42 AM',
+            'percent': '1.91%',
+            'up': True,
+            'change': 2.09, }
+
+        body = self.body('nasdaq.realtime-interday.html')
+        assert api.Nasdaq.parse_realtime(body) == {
+            'quote': 111.78,
+            'when': '12/18/2014 2:44:23 PM',
+            'percent': '2.17%',
+            'up': True,
+            'change': 2.37, }
+
+        body = self.body('nasdaq.realtime-closed.html')
+        assert api.Nasdaq.parse_realtime(body) == {
+            'quote': 112.65,
+            'when': '12/18/2014 - market closed',
+            'percent': '2.96%',
+            'up': True,
+            'change': 3.24, }
 
 
 def test_YQL():
+    """
     yql = api.YQL()
     yql.option_chain('fb')
     yql.option_chain('fb')
+    """
 
 
 def test_Estimize():
+    """
     e = api.Estimize()
     e.estimate('outr').to_report
+    """
 
 
 def test_calendar():
