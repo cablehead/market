@@ -16,6 +16,11 @@ class TestNasdaq(object):
         nasdaq = api.Nasdaq()
         nasdaq.income_statement_annual('chl')
 
+    def test_income_statement_quarterly(self):
+        nasdaq = api.Nasdaq()
+        got = nasdaq.income_statement_quarterly('mu')
+
+
     def test_balance_sheet_annual(self):
         nasdaq = api.Nasdaq()
         nasdaq.balance_sheet_annual('chl')

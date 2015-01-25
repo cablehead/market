@@ -310,6 +310,53 @@ class Nasdaq(object):
 
         return ret
 
+    def income_statement_quarterly(self, code):
+        path = 'nasdaq/income_statement/quarterly/%(code)s/%(code)s' % {
+            'code': code.upper()}
+
+        @cache_weekly(path)
+        def body():
+            target = '/symbol/%(code)s/financials' % {'code': code.lower()}
+            return self.get(target,
+                params={'query': 'income-statement', 'data': 'quarterly'})
+
+        rows = BeautifulSoup(body).find(class_='genTable').find_all('tr')
+
+        want = [
+            'total_revenue',
+            'cost_of_revenue',
+            'gross_profit',
+            'operating_income',
+            'earnings_before_interest_and_tax',
+            'earnings_before_tax',
+            'net_income',
+            'net_income_applicable_to_common_shareholders', ]
+
+        key_mapper = {
+            'total_revenue': 'sales',
+            'net_income_applicable_to_common_shareholders': 'earnings', }
+
+        ret = {}
+        for row in rows:
+            cells = [
+                extract(x) for x in row.children if x.name in ('td', 'th')]
+            if not cells[0]:
+                continue
+
+            key, cols = label(cells[0]), [x for x in cells[2:] if x]
+
+            if key == 'quarter_ending':
+                periods = [parse(x) for x in cols]
+                ret = collections.OrderedDict(
+                    (x, collections.OrderedDict()) for x in periods)
+            else:
+                if key in want:
+                    for i, value in enumerate(cols):
+                        ret[periods[i]][key_mapper.get(key, key)] = \
+                            value * 1000
+
+        return ret
+
 
 class Google(object):
     HOST = "http://www.google.com/"
