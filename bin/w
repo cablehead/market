@@ -7,8 +7,9 @@ import vanilla
 
 def main(argv):
     h = vanilla.Hub()
-    b = h.bean(host='0.0.0.0', port=80)
+    b = h.bean(host='0.0.0.0', port=80, base_path='./www/')
     b.static('/', 'index.html')
+    b.static('/css', 'css')
     h.stop_on_term()
 
 
