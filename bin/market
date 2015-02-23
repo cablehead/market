@@ -165,6 +165,7 @@ def do_scan(filename):
 
 
 def do_review(watch, positions):
+    nasdaq = api.Nasdaq()
 
     lines = open(watch).readlines()
     codes = set([x.strip().upper() for x in lines if x.strip()])
@@ -178,12 +179,15 @@ def do_review(watch, positions):
             self.n = n
 
         def pprint(self):
-            print '%-6s %6.2f %s %-4s %s' % (
+            print '%-4s %s  %-6s %6.2f   %s %-4s %6.2f' % (
+                (self.expiry - datetime.now()).days,
+                self.expiry.strftime('%b %d'),
                 self.code,
                 self.strike,
-                self.expiry.strftime('%b %d'),
-                (self.expiry - datetime.now()).days,
-                self.n, )
+                self.typ,
+                self.n,
+                nasdaq.summary(self.code)['quote'],
+                )
 
 
     class Watch(object):
@@ -193,11 +197,12 @@ def do_review(watch, positions):
             self.quote = quote
 
         def pprint(self):
-            print '%-6s %6.2f %s %-4s' % (
+            print '%-4s %s  %-6s %6.2f   reports' % (
+                (self.expiry - datetime.now()).days,
+                self.expiry.strftime('%b %d'),
                 self.code,
                 self.quote,
-                self.expiry.strftime('%b %d'),
-                (self.expiry - datetime.now()).days, )
+                )
 
     out = []
 
@@ -215,7 +220,6 @@ def do_review(watch, positions):
         out.append(Position(code, expiry, strike, typ, n))
         codes.add(code)
 
-    nasdaq = api.Nasdaq()
 
     for code in codes:
         summary = nasdaq.summary(code)
