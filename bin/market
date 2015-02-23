@@ -5,7 +5,7 @@ Usage:
     market stock <code>
     market new <code>
     market scan <filename>
-    market review <filename>
+    market review <watch> <positions>
     market chain <code> [<expiry>
         [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
     market portfolio
@@ -23,6 +23,8 @@ __version__ = '0.0.1'
 from datetime import datetime
 
 import sys
+
+from dateutil.parser import parse
 
 from docopt import docopt
 
@@ -162,25 +164,66 @@ def do_scan(filename):
                 print expiry.togo, strike.mid, strike.strike, strike.ratio, strike.ratio_annual
 
 
-def do_review(filename):
-    nasdaq = api.Nasdaq()
-    lines = open(filename).readlines()
-    codes = [x.strip() for x in lines if x.strip()]
+def do_review(watch, positions):
+
+    lines = open(watch).readlines()
+    codes = set([x.strip().upper() for x in lines if x.strip()])
+
+    class Position(object):
+        def __init__(self, code, expiry, strike, typ, n):
+            self.code = code
+            self.expiry = expiry
+            self.strike = strike
+            self.typ = typ
+            self.n = n
+
+        def pprint(self):
+            print '%-6s %6.2f %s %-4s %s' % (
+                self.code,
+                self.strike,
+                self.expiry.strftime('%b %d'),
+                (self.expiry - datetime.now()).days,
+                self.n, )
+
+
+    class Watch(object):
+        def __init__(self, code, expiry, quote):
+            self.code = code
+            self.expiry = expiry
+            self.quote = quote
+
+        def pprint(self):
+            print '%-6s %6.2f %s %-4s' % (
+                self.code,
+                self.quote,
+                self.expiry.strftime('%b %d'),
+                (self.expiry - datetime.now()).days, )
 
     out = []
+
+    lines = open(positions).readlines()
+    for line in lines:
+        if line.startswith('#'):
+            continue
+        bits = line.strip().split()
+        if len(bits) != 5:
+            continue
+        code, expiry, strike, typ, n = bits
+        expiry = parse(expiry)
+        strike = float(strike)
+        n = int(n)
+        out.append(Position(code, expiry, strike, typ, n))
+        codes.add(code)
+
+    nasdaq = api.Nasdaq()
 
     for code in codes:
         summary = nasdaq.summary(code)
         estimate = api.Estimize().estimate(code)
-        out.append((code, summary['quote'], estimate.to_report))
+        out.append(Watch(code, estimate.to_report, summary['quote']))
 
-    for code, quote, to_report in sorted(out, lambda x, y: cmp(x[2], y[2])):
-        print '%-6s %6.2f %s %s' % (
-            code,
-            quote,
-            to_report.strftime('%b %d'),
-            (to_report - datetime.now()).days,
-        )
+    for foo in sorted(out, lambda x, y: cmp(x.expiry, y.expiry)):
+        foo.pprint()
 
 
 def do_portfolio():
@@ -241,7 +284,7 @@ def main(argv):
         return do_scan(argv['<filename>'])
 
     if argv.get('review'):
-        return do_review(argv['<filename>'])
+        return do_review(argv['<watch>'], argv['<positions>'])
 
     if argv.get('chain'):
         return do_chain(
