@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+"""
+Usage:
+    parse <file>
+"""
+
+import sys
+import csv
+
+from docopt import docopt
+
+
+def main(argv):
+    rows = list(csv.reader(open(argv['<file>'])))
+    header = rows[0]
+    positions = [dict(zip(header, row)) for
+        row in rows[1:] if len(row) == len(header)]
+
+    print positions[0].keys()
+
+    for position in positions:
+        print position['Symbol']
+
+
+if __name__ == '__main__':
+    argv = docopt(__doc__)
+    sys.exit(main(argv))

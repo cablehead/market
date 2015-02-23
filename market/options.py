@@ -96,11 +96,32 @@ class Strike(Node):
         if s in typ:
             return typ[s]
 
+    @property
+    def mid(self):
+        return round((self.bid + self.ask) / 2, 2)
+
+    @property
+    def strike(self):
+        return self.path[-1]
+
+    @property
+    def expiry(self):
+        return Expiry(self.path[:3])
+
+    @property
+    def ratio(self):
+        return round((self.mid / self.strike) * 100, 2)
+
+    @property
+    def ratio_annual(self):
+        return round(
+            (((self.mid / self.strike) / self.expiry.togo) * 365)*100, 2)
+
     def __getattr__(self, name):
         return getattr(self.node, name)
 
     def __summary__(self):
-        return "bid: %s ask: %s" % (self.node.bid, self.node.ask)
+        return "bid: %s mid: %s ask: %s" % (self.bid, self.mid, self.ask)
 
 
 class Typ(Node):

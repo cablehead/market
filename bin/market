@@ -5,6 +5,7 @@ Usage:
     market stock <code>
     market new <code>
     market scan <filename>
+    market review <filename>
     market chain <code> [<expiry>
         [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
     market portfolio
@@ -147,13 +148,23 @@ def do_scan(filename):
     lines = open(filename).readlines()
     codes = [x.strip() for x in lines if x.strip()]
 
-
     for code in codes:
+        summary = nasdaq.summary(code)
         estimate = api.Estimize().estimate(code)
-        print '%-6s %s' % (code, estimate.to_report.strftime('%b %d'))
+        print '%-6s %s %s' % (
+            code,
+            summary['quote'],
+            estimate.to_report.strftime('%b %d'))
         chain = api.Google().option_chain(code)
         for expiry in chain:
-            print expiry
+            if expiry.togo > 30 and expiry.togo < 60:
+                strike = expiry.p.near(summary['quote']*.95, 1)[1]
+                print expiry.togo, strike.mid, strike.strike, strike.ratio, strike.ratio_annual
+
+
+def do_review(filename):
+    nasdaq = api.Nasdaq()
+    lines = open(filename).readlines()
 
 
 def do_portfolio():
@@ -212,6 +223,9 @@ def main(argv):
 
     if argv.get('scan'):
         return do_scan(argv['<filename>'])
+
+    if argv.get('review'):
+        return do_review(argv['<filename>'])
 
     if argv.get('chain'):
         return do_chain(
