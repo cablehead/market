@@ -165,6 +165,22 @@ def do_scan(filename):
 def do_review(filename):
     nasdaq = api.Nasdaq()
     lines = open(filename).readlines()
+    codes = [x.strip() for x in lines if x.strip()]
+
+    out = []
+
+    for code in codes:
+        summary = nasdaq.summary(code)
+        estimate = api.Estimize().estimate(code)
+        out.append((code, summary['quote'], estimate.to_report))
+
+    for code, quote, to_report in sorted(out, lambda x, y: cmp(x[2], y[2])):
+        print '%-6s %6.2f %s %s' % (
+            code,
+            quote,
+            to_report.strftime('%b %d'),
+            (to_report - datetime.now()).days,
+        )
 
 
 def do_portfolio():
