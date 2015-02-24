@@ -180,7 +180,7 @@ def do_review(watch, positions):
 
         @property
         def quote(self):
-            chain = api.Google().option_chain(code)
+            chain = api.Google().option_chain(self.code)
             contract = chain[self.expiry.strftime('%Y-%m-%d')][self.typ][self.strike]
             try:
                 return contract.mid

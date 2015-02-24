@@ -34,28 +34,32 @@ def last_trading_date(now=None):
 
     cal = calendar()
 
+    def closing_time(dt):
+        if dt.date() in cal['1pm']:
+            closing = dt.replace(hour=13, minute=0)
+        else:
+            closing = dt.replace(hour=16, minute=0)
+        return closing
+
     def opened(when):
+        when = when.date()
         return when.weekday() < 5 and when not in cal['closed']
 
     def last_opened(when):
         while True:
             when = when - timedelta(days=1)
             if opened(when):
-                return when
+                return closing_time(when)
 
-    if not opened(now.date()):
-        return False, last_opened(now.date())
+    if not opened(now):
+        return False, last_opened(now)
 
     opening = now.replace(hour=9, minute=30)
     if now < opening:
-        return False, last_opened(now.date())
+        return False, last_opened(now)
 
-    if now.date() in cal['1pm']:
-        closing = now.replace(hour=13, minute=0)
-    else:
-        closing = now.replace(hour=16, minute=0)
-
-    return bool(now < closing), now.date()
+    closing = closing_time(now)
+    return bool(now < closing), closing
 
 
 def cache(path, ttl=None):
@@ -81,7 +85,7 @@ def cache(path, ttl=None):
 def cache_eod(path):
     in_session, dt = last_trading_date()
     stamp = dt.strftime('%Y-%m-%d')
-    ttl = 30*60 if in_session else None
+    ttl = 30*60 if in_session else (ET() - dt).total_seconds()
     return cache(path+'-%s' % stamp, ttl=ttl)
 
 
@@ -130,6 +134,7 @@ def numeric(s):
     return s
 
 
+# TODO: cache yearly
 def calendar():
     @cache('nasdaqtrader/calendar')
     def body():
@@ -141,10 +146,12 @@ def calendar():
 
     @cache('nasdaqtrader/calendar.json')
     def rows():
-        locate = BeautifulSoup(body).find(class_='dataTable').find_all('tr')
         rows = []
-        for row in locate[1:]:
-            rows.append([extract(x) for x in row.find_all('td')])
+        slabs = BeautifulSoup(body).find_all(class_='dataTable')
+        for slab in slabs:
+            locate = slab.find_all('tr')
+            for row in locate[1:]:
+                rows.append([extract(x) for x in row.find_all('td')])
         return json.dumps(rows)
 
     ret = {'closed': set(), '1pm': set()}
@@ -414,6 +421,7 @@ class Google(object):
             return json.dumps(ret)
 
         in_session, quote_date = last_trading_date()
+        quote_date = quote_date.date()
         data = json.loads(body)
 
         base = options._data.setdefault(code.upper(), {})
@@ -475,6 +483,7 @@ class YQL(object):
             return body
 
         in_session, quote_date = last_trading_date()
+        quote_date = quote_date.date()
         data = json.loads(body)
 
         base = options._data.setdefault(code.upper(), {})

@@ -73,6 +73,7 @@ def test_Estimize():
 
 def test_calendar():
     assert date(2014, 7, 4) in api.calendar()['closed']
+    assert date(2015, 5, 25) in api.calendar()['closed']
 
 
 def test_last_monday():
@@ -86,36 +87,36 @@ def test_last_monday():
 
 def test_last_trading_date():
     now = datetime(2014, 6, 23, 9, 29)  # MON
-    assert api.last_trading_date(now) == (False, date(2014, 6, 20))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 20, 16, 0))
     now = datetime(2014, 6, 23, 9, 30)
-    assert api.last_trading_date(now) == (True, date(2014, 6, 23))
+    assert api.last_trading_date(now) == (True, datetime(2014, 6, 23, 16, 0))
     now = datetime(2014, 6, 23, 16, 01)
-    assert api.last_trading_date(now) == (False, date(2014, 6, 23))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 23, 16, 0))
 
     now = datetime(2014, 6, 25, 9, 29, 25, 386164)  # WED
-    assert api.last_trading_date(now) == (False, date(2014, 6, 24))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 24, 16, 0))
     now = datetime(2014, 6, 25, 9, 30)
-    assert api.last_trading_date(now) == (True, date(2014, 6, 25))
+    assert api.last_trading_date(now) == (True, datetime(2014, 6, 25, 16, 0))
     now = datetime(2014, 6, 25, 16, 01)
-    assert api.last_trading_date(now) == (False, date(2014, 6, 25))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 25, 16, 0))
 
     now = datetime(2014, 6, 28, 9, 29)  # SAT
-    assert api.last_trading_date(now) == (False, date(2014, 6, 27))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 27, 16, 0))
     now = datetime(2014, 6, 28, 9, 30)
-    assert api.last_trading_date(now) == (False, date(2014, 6, 27))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 27, 16, 0))
     now = datetime(2014, 6, 28, 16, 01)
-    assert api.last_trading_date(now) == (False, date(2014, 6, 27))
+    assert api.last_trading_date(now) == (False, datetime(2014, 6, 27, 16, 0))
 
     now = datetime(2014, 7, 03, 9, 29, 25, 386164)  # THU, the 3rd
-    assert api.last_trading_date(now) == (False, date(2014, 7, 02))
+    assert api.last_trading_date(now) == (False, datetime(2014, 7, 02, 16, 0))
     now = datetime(2014, 7, 03, 9, 30)
-    assert api.last_trading_date(now) == (True, date(2014, 7, 03))
+    assert api.last_trading_date(now) == (True, datetime(2014, 7, 03, 13, 0))
     now = datetime(2014, 7, 03, 13, 01)  # Market closes early
-    assert api.last_trading_date(now) == (False, date(2014, 7, 03))
+    assert api.last_trading_date(now) == (False, datetime(2014, 7, 03, 13, 0))
 
     now = datetime(2014, 7, 04, 9, 29, 25, 386164)  # FRI, the 4th
-    assert api.last_trading_date(now) == (False, date(2014, 7, 03))
+    assert api.last_trading_date(now) == (False, datetime(2014, 7, 03, 13, 0))
     now = datetime(2014, 7, 04, 9, 30)
-    assert api.last_trading_date(now) == (False, date(2014, 7, 03))
+    assert api.last_trading_date(now) == (False, datetime(2014, 7, 03, 13, 0))
     now = datetime(2014, 7, 04, 16, 01)
-    assert api.last_trading_date(now) == (False, date(2014, 7, 03))
+    assert api.last_trading_date(now) == (False, datetime(2014, 7, 03, 13, 0))
