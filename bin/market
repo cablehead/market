@@ -192,10 +192,10 @@ def do_review(watch, positions):
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
                 self.code,
-                self.strike,
+                nasdaq.summary(self.code)['quote'],
                 self.typ,
                 self.n,
-                nasdaq.summary(self.code)['quote'],
+                self.strike,
                 self.quote,
                 )
 
