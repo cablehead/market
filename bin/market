@@ -185,7 +185,7 @@ def do_review(watch, positions):
             return contract
 
         def pprint(self):
-            print '%-4s %s  %-6s %6.2f   %s %-4s %6.2f %6.2f %6.2f' % (
+            print '%-4s %s  %-6s %6.2f   options  %s %4s %6.2f %6.2f %6.2f' % (
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
                 self.code,
@@ -199,17 +199,26 @@ def do_review(watch, positions):
 
 
     class Watch(object):
-        def __init__(self, code, expiry, quote):
+        def __init__(self, code, expiry, summary):
             self.code = code
             self.expiry = expiry
-            self.quote = quote
+            self.summary = summary
 
         def pprint(self):
-            print '%-4s %s  %-6s %6.2f   reports' % (
+            delta = self.summary['quote'] - self.summary['previous_close']
+            if delta >= 0:
+                direction = u'\u25B2'
+            else:
+                direction = u'\u25BC'
+                delta = abs(delta)
+
+            print '%-4s %s  %-6s %6.2f   reports  %s %6.2f' % (
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
                 self.code,
-                self.quote,
+                self.summary['quote'],
+                direction,
+                delta,
                 )
 
     out = []
@@ -232,7 +241,7 @@ def do_review(watch, positions):
     for code in codes:
         summary = nasdaq.summary(code)
         estimate = api.Estimize().estimate(code)
-        out.append(Watch(code, estimate.to_report, summary['quote']))
+        out.append(Watch(code, estimate.to_report, summary))
 
     for foo in sorted(out, lambda x, y: cmp(x.expiry, y.expiry)):
         foo.pprint()
