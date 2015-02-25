@@ -179,16 +179,13 @@ def do_review(watch, positions):
             self.n = n
 
         @property
-        def quote(self):
+        def contract(self):
             chain = api.Google().option_chain(self.code)
             contract = chain[self.expiry.strftime('%Y-%m-%d')][self.typ][self.strike]
-            try:
-                return contract.mid
-            except:
-                return 0
+            return contract
 
         def pprint(self):
-            print '%-4s %s  %-6s %6.2f   %s %-4s %6.2f %6.2f' % (
+            print '%-4s %s  %-6s %6.2f   %s %-4s %6.2f %6.2f %6.2f' % (
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
                 self.code,
@@ -196,7 +193,8 @@ def do_review(watch, positions):
                 self.typ,
                 self.n,
                 self.strike,
-                self.quote,
+                self.contract.bid,
+                self.contract.ask,
                 )
 
 
