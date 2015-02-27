@@ -165,6 +165,60 @@ def do_scan(filename):
 
 
 def do_review(watch, positions):
+    # import fabulous
+    # print help(fabulous)
+
+    sixtohex = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff, ]
+
+    def ntorgb(n):
+        n -= 16
+        b = n % 6
+        g = (n / 6) % 6
+        r = (n / 6 / 6) % 6
+        return [sixtohex[x] for x in (r, g, b)]
+
+    def rgbton(rgb):
+        r, g, b = [sixtohex.index(code) for code in rgb]
+        n = b + (6 * g) + (6 * 6 * r) + 16
+        return n
+
+    def rgbdistance(rgb1, rgb2):
+        return sum(abs(rgb1[i] - rgb2[i]) for i in xrange(3))
+
+    def rgbmix(rgbs):
+        import copy
+        rgbs = copy.copy(rgbs)
+        mix = []
+        while rgbs:
+            mix.append(rgbs.pop())
+            rgbs.sort(key=lambda item: sum(rgbdistance(x, item) for x in mix))
+        return mix
+
+    rng = []
+
+    for i in range(16, 232):
+        keep = True
+        rgb = ntorgb(i)
+        if rgbdistance(rgb, [60, 60, 60]) > 200:
+            for check in rng:
+                if rgbdistance(rgb, check) < 180:
+                    keep = False
+                    break
+            if keep:
+                rng.append(rgb)
+
+    rng = rgbmix(rng)
+    rng = [rgbton(x) for x in rng]
+
+    from fabulous.color import fg256
+
+    rng.reverse()
+    print rng
+    print ''.join(str(fg256(i, 'A')) for i in rng)
+
+    assigned = {}
+
+
     nasdaq = api.Nasdaq()
 
     lines = open(watch).readlines()
@@ -188,7 +242,7 @@ def do_review(watch, positions):
             print '%-4s %s  %-6s %6.2f   options  %s %4s %6.2f %6.2f %6.2f' % (
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
-                self.code,
+                fg256(assigned[self.code], self.code),
                 nasdaq.summary(self.code)['quote'],
                 self.typ,
                 self.n,
@@ -215,7 +269,7 @@ def do_review(watch, positions):
             print '%-4s %s  %-6s %6.2f   reports  %s %6.2f' % (
                 (self.expiry - datetime.now()).days,
                 self.expiry.strftime('%b %d'),
-                self.code,
+                fg256(assigned[self.code], self.code),
                 self.summary['quote'],
                 direction,
                 delta,
@@ -237,6 +291,9 @@ def do_review(watch, positions):
         out.append(Position(code, expiry, strike, typ, n))
         codes.add(code)
 
+    codes = list(codes)
+    for i in range(len(codes)):
+        assigned[codes[i]] = rng[i]
 
     for code in codes:
         summary = nasdaq.summary(code)
