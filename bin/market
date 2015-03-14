@@ -6,6 +6,7 @@ Usage:
     market new <code>
     market scan <filename>
     market review <watch> <positions>
+    market p <watch>
     market chain <code> [<expiry>
         [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
     market portfolio
@@ -30,6 +31,7 @@ from docopt import docopt
 
 from market import portfolio
 from market import api
+from market import p
 
 
 def intword(n):
@@ -162,6 +164,59 @@ def do_scan(filename):
             if expiry.togo > 30 and expiry.togo < 60:
                 strike = expiry.p.near(summary['quote']*.95, 1)[1]
                 print expiry.togo, strike.mid, strike.strike, strike.ratio, strike.ratio_annual
+
+
+def do_p(watch):
+    nasdaq = api.Nasdaq()
+
+    lines = open(watch).readlines()
+    codes = set([x.strip().upper() for x in lines if x.strip()])
+
+    rows = []
+
+    color_codes = p.ColorDistinct()
+
+    header = [
+        p.Column('code', color=color_codes),
+        p.Column('quote', fmt='.2f'),
+        p.Column('direction'),
+        p.Column('change', fmt='.2f'),
+        p.Column('%', fmt='.2f'), ]
+
+    for code in codes:
+        summary = nasdaq.summary(code)
+        delta = summary['quote'] - summary['previous_close']
+        if delta >= 0:
+            direction = u'\u25B2'
+        else:
+            direction = u'\u25BC'
+        order = delta
+        delta = abs(delta)
+        perc = (delta / summary['previous_close']) * 100
+        row = [code, summary['quote'], direction, delta, perc]
+        row = [header[i].format(value) for i, value in enumerate(row)]
+        rows.append(row)
+
+    lengths = [0] * len(rows[0])
+
+    rows.sort(key=lambda x: (x[2], x[3]))
+
+    for row in rows:
+        lengths = [max(lengths[i], len(value)) for i, value in enumerate(row)]
+
+    for row in rows:
+        for i, value in enumerate(row):
+
+            if header[i].color:
+                p.terminal.xterm256_set_fg_color(header[i].color.get(value))
+                sys.stdout.write(value)
+                p.terminal.reset()
+            else:
+                sys.stdout.write(value)
+
+            sys.stdout.write(' '*(lengths[i] - len(value)))
+            sys.stdout.write(' ')
+        sys.stdout.write('\n')
 
 
 def do_review(watch, positions):
@@ -368,6 +423,9 @@ def main(argv):
 
     if argv.get('scan'):
         return do_scan(argv['<filename>'])
+
+    if argv.get('p'):
+        return do_p(argv['<watch>'])
 
     if argv.get('review'):
         return do_review(argv['<watch>'], argv['<positions>'])
