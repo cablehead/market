@@ -29,11 +29,22 @@ class Column(object):
 terminal = colorconsole.terminal.get_terminal()
 
 
+class Split(object):
+    def __init__(self):
+        self.lines = [[]]
+
+    def write(self, s, width=None, color=None):
+        self.lines[-1].append((s, width, color))
+
+    def nl(self):
+        self.lines.append([])
+
+
 class D(object):
     def __init__(self):
         self.terminal = colorconsole.terminal.get_terminal()
         self.num_cols, self.num_rows = getTerminalSize()
-        self.terminal.move_right(self.num_cols/2)
+        # self.terminal.move_right(self.num_cols/2)
 
     def write(self, s, width=None, color=None):
         if color:
@@ -48,7 +59,13 @@ class D(object):
 
     def nl(self):
         self.terminal.putch('\n')
-        self.terminal.move_right(self.num_cols/2)
+        # self.terminal.move_right(self.num_cols/2)
+
+    def render(self, split):
+        for line in split.lines[:-1]:
+            for a in line:
+                self.write(*a)
+            self.nl()
 
 
 # http://stackoverflow.com/a/566752/729767

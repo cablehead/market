@@ -272,11 +272,11 @@ def do_review(watch, positions):
     from fabulous.color import fg256
 
     rng.reverse()
-    print rng
-    print ''.join(str(fg256(i, 'A')) for i in rng)
+    # print rng
+    # print ''.join(str(fg256(i, 'A')) for i in rng)
+    ####
 
-    assigned = {}
-
+    color_codes = p.ColorDistinct()
 
     nasdaq = api.Nasdaq()
 
@@ -290,25 +290,30 @@ def do_review(watch, positions):
             self.positions = []
             self.earnings = []
 
-        def pprint(self, last_expiry=None):
+        def pprint(self, split):
             first = True
             def preample(first):
                 if first:
-                    sys.stdout.write('%-4s %6s' % (
+                    split.write('%-4s %6s' % (
                         (self.dt - datetime.now()).days,
                         self.dt.strftime('%b %d'), ))
                 else:
-                    sys.stdout.write('%-4s %6s' % ('', ''))
+                    split.write('%-4s %6s' % ('', ''))
                 return False
 
             if self.earnings:
                 first = preample(first)
-                print '      -] %s' % (', '.join(
-                    str(fg256(assigned[x], x)) for x in self.earnings), )
+                split.write('      -] ')
+                for i, code in enumerate(self.earnings):
+                    split.write(code, color=color_codes.get(code))
+                    if i != len(self.earnings) - 1:
+                        split.write(', ')
+                split.nl()
 
             for position in self.positions:
                 first = preample(first)
-                position.pprint()
+                position.pprint(split)
+                split.nl()
 
     class Position(object):
         def __init__(self, code, expiry, strike, typ, n):
@@ -324,16 +329,13 @@ def do_review(watch, positions):
             contract = chain[self.expiry.strftime('%Y-%m-%d')][self.typ][self.strike]
             return contract
 
-        def pprint(self):
-            print '   %s%s %s %4s %6.2f %6.2f %6.2f' % (
-                (5-len(self.code))*' ',
-                fg256(assigned[self.code], self.code),
-                self.typ,
-                self.n,
-                self.strike,
-                self.contract.bid,
-                self.contract.ask,
-                )
+        def pprint(self, split):
+            split.write('%8s' % self.code, color=color_codes.get(self.code))
+            split.write(' ' + self.typ)
+            split.write(' %4s' % self.n)
+            split.write(' %6.2f' % self.strike)
+            split.write(' %6.2f' % self.contract.bid)
+            split.write(' %6.2f' % self.contract.ask)
 
     days = {}
 
@@ -354,17 +356,19 @@ def do_review(watch, positions):
         day.positions.append(position)
 
     codes = list(codes)
-    for i in range(len(codes)):
-        assigned[codes[i]] = rng[i]
-
     for code in codes:
         to_report = api.Estimize().estimate(code).to_report
         day = days.setdefault(to_report, Day(to_report))
         day.earnings.append(code)
 
+    split = p.Split()
+
     days = sorted(days.values(), key=lambda x: x.dt)
     for day in days:
-        day.pprint()
+        day.pprint(split)
+
+    d = p.D()
+    d.render(split)
 
 
 def do_portfolio():
