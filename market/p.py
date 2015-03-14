@@ -61,7 +61,21 @@ class D(object):
         self.terminal.putch('\n')
         # self.terminal.move_right(self.num_cols/2)
 
-    def render(self, split):
+    def render(self, splits):
+        longest = max(len(x.lines) for x in splits)
+
+        for i in xrange(longest-1):
+            for x, split in enumerate(splits):
+                if i <= len(split.lines) - 2:
+                    offset = (self.num_cols / len(splits)) * x
+                    self.terminal.move_left(self.num_cols)
+                    self.terminal.move_right(offset)
+                    for a in split.lines[i]:
+                        self.write(*a)
+            self.nl()
+
+        return
+
         for line in split.lines[:-1]:
             for a in line:
                 self.write(*a)
