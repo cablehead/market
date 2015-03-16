@@ -217,22 +217,22 @@ def do_p(watch):
 
     for row in rows:
         for i, value in enumerate(row):
-            d.write(value, width=lengths[i]+1, color=header[i].color(value))
+            d.write(
+                value, width=lengths[i]+1, color=header[i].color(value))
         d.nl()
 
     d.terminal.move_left(d.num_cols)
 
 
-def watch_split(codes):
+def watch_split(codes, color_codes):
     nasdaq = api.Nasdaq()
 
-    color_codes = p.ColorDistinct()
     rows = []
 
     header = [
         p.Column('code', color=color_codes.get),
         p.Column('quote', fmt='.2f'),
-        p.Column('direction'),
+        p.Column('direction', color={u'\u25B2': 65,  u'\u25BC': 68}.get),
         p.Column('change', fmt='.2f'),
         p.Column('%', fmt='.2f'), ]
 
@@ -243,19 +243,23 @@ def watch_split(codes):
             direction = u'\u25B2'
         else:
             direction = u'\u25BC'
-        order = delta
-        delta = abs(delta)
         perc = (delta / summary['previous_close']) * 100
+        order = perc
+        delta = abs(delta)
+        perc = abs(perc)
         row = [code, summary['quote'], direction, delta, perc]
         row = [header[i].format(value) for i, value in enumerate(row)]
-        rows.append(row)
+        rows.append((order, row))
 
-    rows.sort(key=lambda x: (x[2], x[3]))
+    rows.sort(key=lambda x: x[0])
+    rows.reverse()
+    rows = [x[1] for x in rows]
 
     lengths = [0] * len(rows[0])
 
     for row in rows:
-        lengths = [max(lengths[i], len(value)) for i, value in enumerate(row)]
+        lengths = [
+            max(lengths[i], len(value)) for i, value in enumerate(row)]
 
     split = p.Split()
 
@@ -355,6 +359,7 @@ def do_review(watch, positions):
                         split.write(', ')
                 split.nl()
 
+            self.positions.sort(key=lambda x: x.code)
             for position in self.positions:
                 first = preample(first)
                 position.pprint(split)
@@ -413,7 +418,7 @@ def do_review(watch, positions):
     for day in days:
         day.pprint(split1)
 
-    split2 = watch_split(codes)
+    split2 = watch_split(codes, color_codes)
 
     d = p.D()
     d.render([split1, split2, p.Split()])
