@@ -9,6 +9,7 @@ Usage:
     market p <watch>
     market chain <code> [<expiry>
         [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
+    market call_spread <code>
     market portfolio
 
 Options:
@@ -54,7 +55,6 @@ def perc(f):
 def do_stock(code):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)
-
     estimate = api.Estimize().estimate(code)
     income = nasdaq.income_statement_annual(code)
 
@@ -78,6 +78,9 @@ def do_stock(code):
     print
     print '    Market cap:', intword(data['market_cap'])
     print '    Yield:     ', perc(data['current_yield'])
+    if data['ex_dividend_date']:
+        print '    Ex Div:      ', \
+            data['ex_dividend_date'].strftime('%b %d')
     print '    Industry:  ', data['industry']
 
     income = nasdaq.income_statement_annual(code)
@@ -344,7 +347,7 @@ def do_review(watch, positions):
             def preample(first):
                 if first:
                     split.write('%-4s %6s' % (
-                        (self.dt - datetime.now()).days,
+                        (self.dt - datetime.now()).days+1,
                         self.dt.strftime('%b %d'), ))
                 else:
                     split.write('%-4s %6s' % ('', ''))
@@ -366,12 +369,13 @@ def do_review(watch, positions):
                 split.nl()
 
     class Position(object):
-        def __init__(self, code, expiry, strike, typ, n):
+        def __init__(self, code, expiry, strike, typ, n, cost):
             self.code = code
             self.expiry = expiry
             self.strike = strike
             self.typ = typ
             self.n = n
+            self.cost = cost
 
         @property
         def contract(self):
@@ -381,12 +385,16 @@ def do_review(watch, positions):
             return contract
 
         def pprint(self, split):
+            change = ((self.cost - self.contract.mid) / self.cost) * 100
+            if self.n > 0:
+                change *= -1
             split.write('%8s' % self.code, color=color_codes.get(self.code))
             split.write(' ' + self.typ)
             split.write(' %4s' % self.n)
             split.write(' %6.2f' % self.strike)
-            split.write(' %6.2f' % self.contract.bid)
-            split.write(' %6.2f' % self.contract.ask)
+            split.write(' %6.2f' % self.contract.mid)
+            split.write(' %6.2f' % self.cost)
+            split.write(' %7.2f' % change)
 
     days = {}
 
@@ -395,13 +403,14 @@ def do_review(watch, positions):
         if line.startswith('#'):
             continue
         bits = line.strip().split()
-        if len(bits) != 5:
+        if len(bits) != 6:
             continue
-        code, expiry, strike, typ, n = bits
+        code, expiry, strike, typ, n, cost = bits
         expiry = parse(expiry)
         strike = float(strike)
         n = int(n)
-        position = Position(code, expiry, strike, typ, n)
+        cost = float(cost)
+        position = Position(code, expiry, strike, typ, n, cost)
         codes.add(code)
         day = days.setdefault(expiry, Day(expiry))
         day.positions.append(position)
@@ -421,7 +430,7 @@ def do_review(watch, positions):
     split2 = watch_split(codes, color_codes)
 
     d = p.D()
-    d.render([split1, split2, p.Split()])
+    d.render([split1, split2])
 
 
 def do_portfolio():
@@ -471,9 +480,40 @@ def do_chain(code, expiry=None, strike=None, offset=None, typ=None):
         expiry = expiry.next()
 
 
+def do_call_spread(code):
+    nasdaq = api.Nasdaq()
+    data = nasdaq.summary(code)
+    print '%s %s' % (code.upper(), data['quote'])
+    chain = api.Google().option_chain(code)
+
+    price = data['quote']
+
+    keys = list(sorted(chain.iterkeys()))
+    expiry = chain[keys[0]]
+
+    e1 = expiry.next().next()
+    print e1
+    c1 = e1['C'].at(price*1.02)
+    print c1
+
+    print
+
+    e2 = e1.next().next().next().next()
+    print e2
+    c2 = e2['C'].at(price*1.0)
+    print c2
+
+    print
+    print e2.togo - e1.togo, c2.mid - c1.mid
+    print (float(e2.togo) / e1.togo) * c1.mid
+
+
 def main(argv):
     if argv.get('stock'):
         return do_stock(argv['<code>'])
+
+    if argv.get('call_spread'):
+        return do_call_spread(argv['<code>'])
 
     if argv.get('new'):
         return do_new(argv['<code>'])

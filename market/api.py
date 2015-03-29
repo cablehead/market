@@ -212,6 +212,7 @@ class Nasdaq(object):
         ret = {}
         mapper = {
             'current_yield': lambda s: float(s[:-1].strip()),
+            'ex_dividend_date': lambda s: None if s == 'N/A' else parse(s),
         }
 
         locate = BeautifulSoup(body).find(id='qwidget_lastsale')
