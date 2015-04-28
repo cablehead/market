@@ -11,6 +11,7 @@ Usage:
         [--strike=<strike>] [--offset=<offset>] [--type=<type>]]
     market call_spread <code>
     market portfolio
+    market roll <code> <expiry> <typ> <strike>
 
 Options:
     -s <strike> --strike==<strike>  # specific strike
@@ -52,6 +53,44 @@ def intword(n):
 def perc(f):
     ret = '%7.2f%%' % f
     return ret
+
+
+def do_roll(code, expiry, typ, strike):
+    trad = tradier.Tradier(os.environ['TRADIER_ACCESS_TOKEN'])
+
+    def togo(dt):
+        now = datetime.now()
+        return (parse(dt) - now).days + 1
+
+    def contract(code, expiry, typ, strike):
+        chain = trad.options.chains(code, expiry)
+        contract = [
+            x for x in chain if
+            x['strike'] == strike and
+            x['option_type'] == typ][0]
+        contract['mid'] = (contract['ask'] + contract['bid']) / 2
+        return contract
+
+    expirations = trad.options.expirations(code)
+    start = expirations.index(expiry)
+
+    possible = [x for x in expirations[start:] if togo(x) < 70]
+
+    first = None
+    for expiry in possible:
+        mid = contract(code, expiry, typ, strike)['mid']
+        if not first:
+            first = mid
+
+        print '%s %3s %6.2f %6.2f %6.2f' % (
+            expiry,
+            togo(expiry),
+            mid,
+            mid - first,
+            100*((mid - first) / togo(expiry)),
+            )
+
+    return
 
 
 def do_stock(code):
@@ -566,6 +605,14 @@ def main(argv):
 
     if argv.get('portfolio'):
         return do_portfolio()
+
+    if argv.get('roll'):
+        return do_roll(
+            argv['<code>'],
+            argv['<expiry>'],
+            argv['<typ>'],
+            float(argv['<strike>']),
+            )
 
 
 if __name__ == '__main__':
