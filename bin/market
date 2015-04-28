@@ -25,11 +25,13 @@ __version__ = '0.0.1'
 from datetime import datetime
 
 import sys
+import os
 
 from dateutil.parser import parse
 
 from docopt import docopt
 
+import tradier
 
 from market import portfolio
 from market import api
@@ -335,6 +337,7 @@ def do_review(watch, positions):
     lines = open(watch).readlines()
     codes = set([x.strip().upper() for x in lines if x.strip()])
 
+    trad = tradier.Tradier(os.environ['TRADIER_ACCESS_TOKEN'])
 
     class Day(object):
         def __init__(self, dt):
@@ -368,6 +371,8 @@ def do_review(watch, positions):
                 position.pprint(split)
                 split.nl()
 
+    chain_cache = {}
+
     class Position(object):
         def __init__(self, code, expiry, strike, typ, n, cost):
             self.code = code
@@ -379,6 +384,30 @@ def do_review(watch, positions):
 
         @property
         def contract(self):
+            # print self.code, self.expiry, self.typ, self.strike
+
+            key = (self.code, self.expiry)
+            if not key in chain_cache:
+                chain_cache[key] = trad.options.chains(self.code, self.expiry)
+            chain = chain_cache[key]
+
+            option_type = 'call' if self.typ == 'C' else 'put'
+
+            class Contract(object):
+                def __init__(self, contract):
+                    self.contract = contract
+
+                @property
+                def mid(self):
+                    return (self.contract['bid'] + self.contract['ask']) / 2
+
+            contract = [
+                x for x in chain if
+                x['strike'] == self.strike and
+                x['option_type'] == option_type][0]
+
+            return Contract(contract)
+
             chain = api.Google().option_chain(self.code)
             contract = chain[self.expiry.strftime('%Y-%m-%d')
                 ][self.typ][self.strike]
