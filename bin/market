@@ -485,9 +485,12 @@ def do_review(watch, positions):
 
     codes = list(codes)
     for code in codes:
-        to_report = api.Estimize().estimate(code).to_report
-        day = days.setdefault(to_report, Day(to_report))
-        day.earnings.append(code)
+        try:
+            to_report = api.Estimize().estimate(code).to_report
+            day = days.setdefault(to_report, Day(to_report))
+            day.earnings.append(code)
+        except:
+            pass
 
     split1 = p.Split()
 
