@@ -440,12 +440,15 @@ def do_review(watch, positions):
                 def mid(self):
                     return (self.contract['bid'] + self.contract['ask']) / 2
 
-            contract = [
+            contracts = [
                 x for x in chain if
                 x['strike'] == self.strike and
-                x['option_type'] == option_type][0]
+                x['option_type'] == option_type]
 
-            return Contract(contract)
+            if contracts:
+                return Contract(contracts[0])
+
+            return Contract({'ask': 0, 'bid': 0})
 
             chain = api.Google().option_chain(self.code)
             contract = chain[self.expiry.strftime('%Y-%m-%d')
