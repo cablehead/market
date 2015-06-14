@@ -24,6 +24,10 @@ class TestNasdaq(object):
     def test_balance_sheet_annual(self):
         nasdaq = api.Nasdaq()
         nasdaq.balance_sheet_annual('chl')
+
+    def test_earnings_report(self):
+        nasdaq = api.Nasdaq()
+        print nasdaq.earnings_report('mu')
     """
 
     def body(self, name):

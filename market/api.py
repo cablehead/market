@@ -365,6 +365,21 @@ class Nasdaq(object):
 
         return ret
 
+    def earnings_report(self, code):
+        path = 'nasdaq/earnings/report/%(code)s/%(code)s' % {
+            'code': code.upper()}
+
+        @cache_weekly(path)
+        def body():
+            target = '/earnings/report/%(code)s' % {'code': code.lower()}
+            return self.get(target)
+
+        try:
+            dt = BeautifulSoup(body).find('h2').text.split(':')[1].strip()
+            return parse(dt)
+        except:
+            return
+
 
 class Google(object):
     HOST = "http://www.google.com/"
