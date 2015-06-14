@@ -3,7 +3,7 @@
 """
 Usage:
     market stock <code>
-    market new <code>
+    market trailing <code>
     market scan <filename>
     market review <watch> <positions>
     market p <watch>
@@ -74,7 +74,7 @@ def do_roll(code, expiry, typ, strike):
     expirations = trad.options.expirations(code)
     start = expirations.index(expiry)
 
-    possible = [x for x in expirations[start:] if togo(x) < 70]
+    possible = [x for x in expirations[start:] if togo(x) < 100]
 
     first = None
     for expiry in possible:
@@ -184,12 +184,14 @@ def do_stock(code):
                 data['market_cap'] / float(sheet[period]['total_equity']))
 
 
-def do_new(code):
+def do_trailing(code):
     nasdaq = api.Nasdaq()
     data = nasdaq.summary(code)
     income = nasdaq.income_statement_quarterly(code)
+    for key in income:
+        print key.strftime('%Y-%m-%d'), intword(income[key]['earnings'])
     total = sum([x['earnings'] for x in income.values()])
-    print intword(total)
+    print "          ", intword(total)
 
 
 def do_scan(filename):
@@ -589,8 +591,8 @@ def main(argv):
     if argv.get('call_spread'):
         return do_call_spread(argv['<code>'])
 
-    if argv.get('new'):
-        return do_new(argv['<code>'])
+    if argv.get('trailing'):
+        return do_trailing(argv['<code>'])
 
     if argv.get('scan'):
         return do_scan(argv['<filename>'])
