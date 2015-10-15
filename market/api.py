@@ -219,8 +219,11 @@ class Nasdaq(object):
 
         ret['quote'] = float(locate.text[1:])
 
-        locate = search(body, 'Industry:')
-        ret['industry'] = locate.parent.parent.find('a').text
+        try:
+            locate = search(body, 'Industry:')
+            ret['industry'] = locate.parent.parent.find('a').text
+        except:
+            ret['industry'] = None
 
         locate = search(body, 'Market cap')
         for row in locate.find_parent('table').find_all('tr'):
@@ -522,7 +525,7 @@ class YQL(object):
 
 
 class Estimize(object):
-    HOST = 'http://www.estimize.com'
+    HOST = 'https://www.estimize.com'
 
     def estimate(self, code):
         path = 'estimize/earnings/%(code)s/%(code)s' % {'code': code.upper()}
